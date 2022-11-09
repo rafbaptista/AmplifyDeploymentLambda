@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Funcao Lambda invocada pelo EventBridge 1x ao dia para realizar deployment do blog no AWS Amplify as 21h (UTC - 3) ou 00h (UTC)'
+
+Resources:
+  AmplifyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: 
+        S3Bucket: demo-bucket-rafa
+        S3Key: AmplifyDeploymentLambda.zip
+      FunctionName: "AmplifyLambdaFunction"
+      Handler: start.lambda_handler
+      Role: arn:aws:iam::720066946314:role/AmplifyDeploymentRole
+      Runtime: python3.9
+      Timeout: 60
+      Environment:
+        Variables:
+          APP_ID: "dmbhou1uotf52"
+          RELEASE_BRANCH: "main"  
+
+  ScheduledRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "ScheduledRule"
+      ScheduleExpression: "cron(0 0 * * ? *)"
+      State: "ENABLED"
+      Targets: 
+        - Arn: !GetAtt AmplifyLambdaFunction.Arn
+          Id: "TargetFunctionV1"
+          
+  PermissionForEventsToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: "AmplifyLambdaFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ScheduledRule.Arn
